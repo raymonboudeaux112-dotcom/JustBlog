@@ -4,24 +4,9 @@ import { Coffee } from 'lucide-react';
 
 export function Preloader({ onLoadComplete }: { onLoadComplete: () => void }) {
   useEffect(() => {
-    const startTime = Date.now();
-    const MIN_LOADING_TIME = 1500; // Increased to let the animation play
+    const timer = window.setTimeout(onLoadComplete, 1500);
 
-    const finishLoading = () => {
-      const elapsed = Date.now() - startTime;
-      const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsed);
-      
-      setTimeout(() => {
-        onLoadComplete();
-      }, remainingTime);
-    };
-
-    if (document.readyState === 'complete') {
-      finishLoading();
-    } else {
-      window.addEventListener('load', finishLoading);
-      return () => window.removeEventListener('load', finishLoading);
-    }
+    return () => window.clearTimeout(timer);
   }, [onLoadComplete]);
 
   return (

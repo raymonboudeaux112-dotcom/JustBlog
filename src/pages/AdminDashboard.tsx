@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { fetchStats, fetchBlogs, fetchUsers } from "../lib/api";
+import { fetchStats, fetchBlogs, fetchUsers, parseApiResponse } from "../lib/api";
 import { BarChart3, Users, FileText, Settings, LogOut, Eye, Heart, Image as ImageIcon, Link as LinkIcon, Bold, Italic, List, X, FolderOpen, MessageSquare, Check, Trash2, Edit2, Bell } from "lucide-react";
 
 const CreatePostModal = ({ onClose, onSuccess, initialData = null }: { onClose: () => void, onSuccess: () => void, initialData?: any }) => {
@@ -73,17 +73,13 @@ const CreatePostModal = ({ onClose, onSuccess, initialData = null }: { onClose: 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
       });
-      if (res.ok) {
-        const draftKey = initialData ? `admin_edit_post_${initialData.id}` : 'admin_draft_post';
-        localStorage.removeItem(draftKey);
-        onSuccess();
-        onClose();
-      } else {
-        const data = await res.json();
-        setErrorMsg(`Failed to ${initialData ? 'update' : 'create'} post: ${data.error || 'Unknown error'}`);
-      }
+      await parseApiResponse(res);
+      const draftKey = initialData ? `admin_edit_post_${initialData.id}` : 'admin_draft_post';
+      localStorage.removeItem(draftKey);
+      onSuccess();
+      onClose();
     } catch (e: any) {
-      setErrorMsg(`Network error: ${e.message}`);
+      setErrorMsg(`Failed to ${initialData ? 'update' : 'create'} post: ${e.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -216,14 +212,10 @@ const CreatePostModal = ({ onClose, onSuccess, initialData = null }: { onClose: 
                         try {
                           setIsSubmitting(true);
                           const res = await fetch("/api/upload", { method: "POST", body: fd });
-                          const data = await res.json();
-                          if (res.ok) {
-                            setFormData(prev => ({ ...prev, thumbnail: data.url }));
-                          } else {
-                            setErrorMsg(data.error || "Upload failed");
-                          }
-                        } catch (err) {
-                          setErrorMsg("Upload failed due to network error");
+                          const data = await parseApiResponse<{ url: string }>(res);
+                          setFormData(prev => ({ ...prev, thumbnail: data.url }));
+                        } catch (err: any) {
+                          setErrorMsg(`Upload failed: ${err.message}`);
                         } finally {
                           setIsSubmitting(false);
                         }
@@ -299,16 +291,11 @@ const UserModal = ({ onClose, onSuccess, initialData = null }: { onClose: () => 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
       });
-      
-      if (res.ok) {
-        onSuccess();
-        onClose();
-      } else {
-        const data = await res.json();
-        setErrorMsg(`Failed to ${initialData ? 'update' : 'create'} user: ${data.error || 'Unknown error'}`);
-      }
+      await parseApiResponse(res);
+      onSuccess();
+      onClose();
     } catch (e: any) {
-      setErrorMsg(`Network error: ${e.message}`);
+      setErrorMsg(`Failed to ${initialData ? 'update' : 'create'} user: ${e.message}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -431,14 +418,10 @@ export default function AdminDashboard() {
     if (!window.confirm("Are you sure you want to delete this user?")) return;
     try {
       const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        loadData();
-      } else {
-        const data = await res.json();
-        alert(`Failed to delete: ${data.error}`);
-      }
+      await parseApiResponse(res);
+      loadData();
     } catch (e: any) {
-      alert(`Error deleting user: ${e.message}`);
+      alert(`Failed to delete user: ${e.message}`);
     }
   };
 
@@ -451,14 +434,10 @@ export default function AdminDashboard() {
     if (!window.confirm("Are you sure you want to delete this blog post?")) return;
     try {
       const res = await fetch(`/api/blogs/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        loadData();
-      } else {
-        const data = await res.json();
-        alert(`Failed to delete: ${data.error}`);
-      }
+      await parseApiResponse(res);
+      loadData();
     } catch (e: any) {
-      alert(`Error deleting blog: ${e.message}`);
+      alert(`Failed to delete blog: ${e.message}`);
     }
   };
 

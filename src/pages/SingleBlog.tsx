@@ -19,6 +19,9 @@ export default function SingleBlog() {
         .then(setBlog)
         .catch(console.error)
         .finally(() => setIsLoading(false));
+    } else {
+      setBlog(null);
+      setIsLoading(false);
     }
   }, [slug]);
 
@@ -79,7 +82,7 @@ export default function SingleBlog() {
   }
 
   // Very basic markdown-like renderer for prototype
-  const renderContent = (content: string) => {
+  const renderContent = (content = "") => {
     return content.split('\n\n').map((paragraph, idx) => {
       if (paragraph.startsWith('## ')) {
         return <h2 key={idx} className="text-2xl font-bold text-secondary mt-10 mb-4">{paragraph.replace('## ', '')}</h2>;
@@ -113,19 +116,25 @@ export default function SingleBlog() {
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-y border-slate-100 py-6">
           <div className="flex items-center gap-4">
-            <img src={blog.authorAvatar} alt={blog.authorName} className="w-12 h-12 rounded-full ring-2 ring-slate-100" />
+            {blog.authorAvatar ? (
+              <img src={blog.authorAvatar} alt={blog.authorName || "Author"} className="w-12 h-12 rounded-full ring-2 ring-slate-100 bg-slate-100" />
+            ) : (
+              <div className="w-12 h-12 rounded-full ring-2 ring-slate-100 bg-slate-100 flex items-center justify-center text-slate-500 font-semibold">
+                {(blog.authorName || "Admin").charAt(0)}
+              </div>
+            )}
             <div>
-              <p className="font-medium text-secondary text-base">{blog.authorName}</p>
+              <p className="font-medium text-secondary text-base">{blog.authorName || "Admin"}</p>
               <p className="text-slate-500 text-sm">Published on {new Date(blog.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
             </div>
           </div>
           
           <div className="flex items-center gap-4 text-slate-500">
             <button onClick={handleAuthRequiredAction} className="flex items-center gap-1.5 hover:text-primary transition-colors bg-slate-50 hover:bg-blue-50 px-3 py-1.5 rounded-full text-sm font-medium">
-              <Heart size={18} /> {blog.likes}
+              <Heart size={18} /> {blog.likes || 0}
             </button>
             <button onClick={handleAuthRequiredAction} className="flex items-center gap-1.5 hover:text-primary transition-colors bg-slate-50 hover:bg-blue-50 px-3 py-1.5 rounded-full text-sm font-medium">
-              <MessageSquare size={18} /> {blog.commentsCount}
+              <MessageSquare size={18} /> {blog.commentsCount || 0}
             </button>
             <button onClick={handleAuthRequiredAction} className="p-2 hover:text-primary hover:bg-slate-50 rounded-full transition-colors ml-2">
               <Bookmark size={20} />
@@ -145,7 +154,11 @@ export default function SingleBlog() {
           transition={{ duration: 0.6 }}
           className="rounded-3xl overflow-hidden aspect-video md:aspect-[21/9] shadow-lg"
         >
-          <img src={blog.thumbnail} alt={blog.title} className="w-full h-full object-cover" />
+          {blog.thumbnail ? (
+            <img src={blog.thumbnail} alt={blog.title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-slate-100" />
+          )}
         </motion.div>
       </div>
 
@@ -157,7 +170,7 @@ export default function SingleBlog() {
         
         {/* Tags */}
         <div className="mt-12 pt-8 border-t border-slate-100 flex flex-wrap gap-2">
-          {blog.tags.map((tag: string) => (
+          {(Array.isArray(blog.tags) ? blog.tags : []).map((tag: string) => (
             <span key={tag} className="px-4 py-1.5 bg-slate-100 text-slate-600 rounded-full text-sm font-medium hover:bg-slate-200 transition-colors cursor-pointer">
               #{tag}
             </span>

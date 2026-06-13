@@ -3,12 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
-import { AnimatePresence } from "motion/react";
 import { Navbar } from "./components/layout/Navbar";
 import { Footer } from "./components/layout/Footer";
-import { Preloader } from "./components/Preloader";
 import { NewsletterPopup } from "./components/NewsletterPopup";
 import { ScrollToTop } from "./components/ScrollToTop";
 
@@ -41,13 +38,8 @@ function Layout() {
 }
 
 export default function App() {
-  const [isLoading, setIsLoading] = useState(true);
-
   return (
     <>
-      <AnimatePresence>
-        {isLoading && <Preloader onLoadComplete={() => setIsLoading(false)} />}
-      </AnimatePresence>
       <NewsletterPopup />
       <BrowserRouter>
         <Routes>

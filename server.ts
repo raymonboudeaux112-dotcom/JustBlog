@@ -1,23 +1,48 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import { fileURLToPath } from "url";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import multer from "multer";
 import fs from "fs";
+import "dotenv/config";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const upload = multer({ storage: multer.memoryStorage() });
 
 let supabaseClient: SupabaseClient | null = null;
+let hasLoggedMissingSupabase = false;
+let hasMissingSupabaseCredentials = false;
+let hasLoggedSupabaseSchemaIssue = false;
+let hasSupabaseSchemaIssue = false;
+
+function handleSupabaseSchemaIssue(error: any) {
+  if (error?.code !== 'PGRST205') {
+    return false;
+  }
+
+  hasSupabaseSchemaIssue = true;
+  if (!hasLoggedSupabaseSchemaIssue) {
+    console.warn("Supabase tables are missing. Using local_db.json fallback until the schema is created.");
+    hasLoggedSupabaseSchemaIssue = true;
+  }
+  return true;
+}
 
 function getSupabase() {
+  if (hasMissingSupabaseCredentials || hasSupabaseSchemaIssue) {
+    return null;
+  }
+
   if (!supabaseClient) {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_ANON_KEY;
     if (!url || !key || url === "YOUR_SUPABASE_URL") {
-      console.warn("Supabase credentials (SUPABASE_URL, SUPABASE_ANON_KEY) missing. Returning empty datasets.");
+      hasMissingSupabaseCredentials = true;
+      if (!hasLoggedMissingSupabase) {
+        console.warn("Supabase credentials missing. Using local_db.json fallback.");
+        hasLoggedMissingSupabase = true;
+      }
       return null;
     }
     try {
@@ -50,9 +75,8 @@ function saveLocalDb() {
   }
 }
 
-async function startServer() {
+export function createApp() {
   const app = express();
-  const PORT = 3000;
 
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -106,7 +130,9 @@ async function startServer() {
       }]).select().single();
 
       if (error) {
-        console.error("Insert error:", error);
+        if (!handleSupabaseSchemaIssue(error)) {
+          console.error("Insert error:", error);
+        }
         return fallbackInsert();
       }
 
@@ -154,7 +180,9 @@ async function startServer() {
       }).eq('id', id).select().single();
 
       if (error) {
-         console.error("Update error:", error);
+         if (!handleSupabaseSchemaIssue(error)) {
+           console.error("Update error:", error);
+         }
          return fallbackUpdate();
       }
       res.json(data);
@@ -193,7 +221,9 @@ async function startServer() {
 
       const { error } = await supabase.from('Blogs').delete().eq('id', id);
       if (error) {
-        console.error("Delete error:", error);
+        if (!handleSupabaseSchemaIssue(error)) {
+          console.error("Delete error:", error);
+        }
         if (!deletedLocal) return fallbackDelete();
       }
       res.json({ success: true });
@@ -243,7 +273,7 @@ async function startServer() {
         tags: blog.tags || []
       }));
     } else if (error) {
-      console.error(error);
+      handleSupabaseSchemaIssue(error);
     }
 
     // Merge in localDb blogs
@@ -265,8 +295,6 @@ async function startServer() {
     const fallbackGet = () => {
       const mockBlog = localDb.blogs.find(b => b.slug === req.params.slug);
       if (mockBlog) {
-        mockBlog.views += 1;
-        saveLocalDb();
         return res.json({ ...mockBlog, authorName: "Admin", authorAvatar: "", commentsCount: 0 });
       }
       return res.status(404).json({ error: "Blog not found" });
@@ -428,9 +456,17 @@ async function startServer() {
 
   app.use("/api", apiRouter);
 
+  return app;
+}
+
+async function startServer() {
+  const app = createApp();
+  const PORT = 3000;
+
   // --- Vite Middleware ---
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
+    const { createServer } = await import("vite");
+    const vite = await createServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
@@ -448,4 +484,6 @@ async function startServer() {
   });
 }
 
-startServer();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  startServer();
+}

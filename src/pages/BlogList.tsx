@@ -96,7 +96,11 @@ export default function BlogList() {
                   >
                     <Link to={`/blog/${post.slug}`} className="flex-col flex flex-grow">
                       <div className="h-48 overflow-hidden">
-                        <img src={post.thumbnail} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
+                        {post.thumbnail ? (
+                          <img src={post.thumbnail} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out" />
+                        ) : (
+                          <div className="w-full h-full bg-slate-100" />
+                        )}
                       </div>
                       <div className="p-6 flex flex-col flex-grow">
                         <div className="flex items-center gap-3 mb-3">
@@ -116,9 +120,15 @@ export default function BlogList() {
                         
                         <div className="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
                           <div className="flex items-center gap-2">
-                            <img src={post.authorAvatar} alt={post.authorName} className="w-8 h-8 rounded-full bg-slate-200" />
+                            {post.authorAvatar ? (
+                              <img src={post.authorAvatar} alt={post.authorName || "Author"} className="w-8 h-8 rounded-full bg-slate-200" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-500">
+                                {(post.authorName || "A").charAt(0)}
+                              </div>
+                            )}
                             <div>
-                              <p className="text-sm font-medium text-secondary leading-none">{post.authorName}</p>
+                              <p className="text-sm font-medium text-secondary leading-none">{post.authorName || "Admin"}</p>
                               <p className="text-xs text-slate-400 mt-1">{new Date(post.createdAt).toLocaleDateString()}</p>
                             </div>
                           </div>
