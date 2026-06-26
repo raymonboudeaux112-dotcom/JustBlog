@@ -46,7 +46,19 @@ function getSupabase() {
       return null;
     }
     try {
-      supabaseClient = createClient(url, key);
+      supabaseClient = createClient(url, key, {
+        global: {
+          fetch: (url, options) => {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), 4000); // 4 seconds timeout
+            const fetchFn = typeof fetch !== 'undefined' ? fetch : globalThis.fetch;
+            return fetchFn(url, {
+              ...options,
+              signal: controller.signal
+            }).finally(() => clearTimeout(id));
+          }
+        }
+      });
     } catch (err) {
       console.warn("Error initializing Supabase client:", err);
       return null;
@@ -391,15 +403,14 @@ export function createApp() {
 
     try {
       const [
-        { count: totalBlogs },
         { count: totalUsers },
         { data: engagementData }
       ] = await Promise.all([
-        supabase.from('Blogs').select('*', { count: 'exact', head: true }),
         supabase.from('Users').select('*', { count: 'exact', head: true }),
         supabase.from('Blogs').select('views, likes')
       ]);
 
+      const totalBlogs = engagementData ? engagementData.length : 0;
       const totalViews = (engagementData || []).reduce((acc, curr) => acc + (curr.views || 0), 0);
       const totalLikes = (engagementData || []).reduce((acc, curr) => acc + (curr.likes || 0), 0);
 
@@ -484,6 +495,6 @@ async function startServer() {
   });
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (typeof process !== "undefined" && process.argv && process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   startServer();
 }
