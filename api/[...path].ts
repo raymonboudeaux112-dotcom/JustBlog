@@ -4,7 +4,7 @@ let startupError: any = null;
 async function initApp() {
   if (app || startupError) return;
   try {
-    const module = await import("../server");
+    const module = await import("../server.js");
     app = module.createApp();
   } catch (e: any) {
     startupError = {
