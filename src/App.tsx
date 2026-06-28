@@ -3,11 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { useState } from "react";
 import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
+import { AnimatePresence } from "motion/react";
 import { Navbar } from "./components/layout/Navbar";
 import { Footer } from "./components/layout/Footer";
 import { NewsletterPopup } from "./components/NewsletterPopup";
 import { ScrollToTop } from "./components/ScrollToTop";
+import { Preloader } from "./components/Preloader";
 
 // Lazy placeholders for pages
 import Home from "./pages/Home";
@@ -38,8 +41,13 @@ function Layout() {
 }
 
 export default function App() {
+  const [loading, setLoading] = useState(true);
+
   return (
     <>
+      <AnimatePresence>
+        {loading && <Preloader key="preloader" onLoadComplete={() => setLoading(false)} />}
+      </AnimatePresence>
       <NewsletterPopup />
       <BrowserRouter>
         <Routes>
